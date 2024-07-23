@@ -1,0 +1,44 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pdm
+        pdm install
+
+    - name: Run tests
+      run: |
+        pdm run pytest --cov=app --cov-report=xml
+
+    - name: Build and publish Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        docker build -t your_dockerhub_username/your_image_name:latest .
+        echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+        docker push your_dockerhub_username/your_image_name:latest
+
+    - name: Deploy to Production
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: |
+        ssh user@your_server_ip 'docker pull your_dockerhub_username/your_image_name:latest && docker-compose -f /path/to/docker-compose.yml up -d'
