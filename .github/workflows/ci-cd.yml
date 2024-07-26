@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      DEV_DATABASE_URL: "postgresql+psycopg2://postgres:postgres@127.0.0.1:5433/db"
-      TEST_DATABASE_URL: "postgresql+psycopg2://postgres:postgres@127.0.0.1:5434/db"
-      PROD_DATABASE_URL: "postgresql+psycopg2://postgres:postgres@127.0.0.1:5435/db"
-      FRONTEND_URL: "http://localhost:8000"
-      JWT_SECRET_KEY: "e4c6d72765c5c13bc070f93f26a6bd7447511715bbd3efbe1542b95f1c9d767f"
-      JWT_ALGORITHM: "HS256"
-      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 30
-      JWT_REFRESH_TOKEN_EXPIRE_MINUTES: 10080
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      DEV_DATABASE_URL: ${{ secrets.DEV_DATABASE_URL }}
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      JWT_ALGORITHM: ${{ secrets.JWT_ALGORITHM }}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_ACCESS_TOKEN_EXPIRE_MINUTES }}
+      JWT_REFRESH_TOKEN_EXPIRE_MINUTES: ${{ secrets.JWT_REFRESH_TOKEN_EXPIRE_MINUTES }}
 
     steps:
     - name: Checkout code
