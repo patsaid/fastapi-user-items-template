@@ -26,5 +26,3 @@ services:
       - dev-db
     networks:
       - dev-network
-
-name: user-items
