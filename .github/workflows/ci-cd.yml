@@ -12,8 +12,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_DB: db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+
     env:
-      # dummy values, needs to be replaced and stored in secrets
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "postgres"
       DEV_DATABASE_URL: "postgresql+psycopg2://postgres:postgres@127.0.0.1:5433/db"
@@ -40,6 +49,17 @@ jobs:
         pip install pdm
         pdm install
 
+    - name: Set up Docker Compose
+      run: |
+        docker-compose -f docker-compose.yml up -d
+        docker ps -a
+
+    - name: Wait for DB
+      run: |
+        while ! nc -z localhost 5433; do   
+          sleep 1
+        done
+
     - name: Run lint
       run: |
         pdm run pylint app
@@ -48,4 +68,7 @@ jobs:
       run: |
         pdm run pytest
 
-  # add more jobs for deployment, etc.
+    - name: Tear down Docker Compose
+      if: always()
+      run: |
+        docker-compose -f docker-compose.yml down
