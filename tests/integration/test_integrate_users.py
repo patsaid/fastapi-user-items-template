@@ -1,15 +1,31 @@
+"""
+This module contains integration tests for the user-related endpoints of the FastAPI application.
+"""
+
 import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy.orm.session import Session
+
 from app.routes.auth.tokens import create_access_token
 from app.routes.auth.utils import hash_pass
 from app.routes.users.models import Users
 from tests.factories.models_factory import get_random_user_dict
 
-"""
-- [ ] Test POST new user successfully
-"""
 
+def test_integrate_create_new_user_successful(
+    client: TestClient, db_session_integration: Session
+):
+    """
+    Test case to verify the successful creation of a new user.
 
-def test_integrate_create_new_user_successful(client, db_session_integration):
+    Args:
+        client (TestClient): The FastAPI TestClient instance.
+        db_session_integration (Session): The database session for integration testing.
+
+    Returns:
+        None
+    """
+
     # Arrange: Prepare test data
     user_data = get_random_user_dict()
     user_data.pop("id")
@@ -33,7 +49,19 @@ def test_integrate_create_new_user_successful(client, db_session_integration):
     # Compare other relevant fields if necessary, but exclude password for security reasons
 
 
-def test_integrate_login_successful(client, db_session_integration):
+def test_integrate_login_successful(
+    client: TestClient, db_session_integration: Session
+):
+    """
+    Test case for successful login integration.
+
+    Args:
+        client (TestClient): The FastAPI test client.
+        db_session_integration (Session): The database session for integration testing.
+
+    Returns:
+        None
+    """
     # Arrange: Prepare test data
     user_data = get_random_user_dict()
     user_data.pop("id")
@@ -57,23 +85,20 @@ def test_integrate_login_successful(client, db_session_integration):
     assert "refresh_token" in body
     assert body["token_type"] == "bearer"
 
-    # # Additional assertion: Verify that tokens can be decoded and are valid
-    # # This is optional but useful to ensure tokens are correctly generated
-    # import jwt
-    # from app.auth.tokens import SECRET_KEY, ALGORITHM
 
-    # try:
-    #     decoded_access_token = jwt.decode(body["access_token"], SECRET_KEY, algorithms=[ALGORITHM])
-    #     decoded_refresh_token = jwt.decode(body["refresh_token"], SECRET_KEY, algorithms=[ALGORITHM])
-    #     assert decoded_access_token["id"] == new_user.id
-    #     assert decoded_refresh_token["id"] == new_user.id
-    # except jwt.ExpiredSignatureError:
-    #     assert False, "Token has expired"
-    # except jwt.InvalidTokenError:
-    #     assert False, "Token is invalid"
+def test_integrate_login_unsuccessful(client: TestClient):
+    """
+    Test case to verify the behavior of login with invalid credentials.
 
+    Args:
+        client (TestClient): The FastAPI test client.
 
-def test_integrate_login_unsuccessful(client, db_session_integration):
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If the response status code or JSON data does not match the expected values.
+    """
     # Act: Make a POST request to login with invalid credentials
     login_data = {"email": "invalid@example.com", "password": "wrongpassword"}
     response = client.post("/users/signin", json=login_data)
@@ -84,7 +109,16 @@ def test_integrate_login_unsuccessful(client, db_session_integration):
 
 
 @pytest.fixture
-def user_with_token(db_session_integration):
+def user_with_token(db_session_integration: Session):
+    """
+    Helper function to create a test user with an access token.
+
+    Args:
+        db_session_integration (Session): The database session.
+
+    Returns:
+        Tuple[Users, str]: A tuple containing the test user object and the access token.
+    """
     # Arrange: Prepare test user data
     user_data = get_random_user_dict()
     user_data["role"] = "user"
@@ -102,7 +136,16 @@ def user_with_token(db_session_integration):
 
 
 @pytest.fixture
-def admin_user_with_token(db_session_integration):
+def admin_user_with_token(db_session_integration: Session):
+    """
+    Function to create an admin user and generate an access token for testing purposes.
+
+    Args:
+        db_session_integration (Session): The database session object.
+
+    Returns:
+        Tuple[Users, str]: A tuple containing the admin user object and the access token.
+    """
     # Arrange: Prepare test user data
     user_data = get_random_user_dict()
     user_data["role"] = "admin"
@@ -119,7 +162,21 @@ def admin_user_with_token(db_session_integration):
     return user, access_token
 
 
-def test_integrate_get_me_successful(client, db_session_integration, user_with_token):
+def test_integrate_get_me_successful(
+    client: TestClient,
+    user_with_token: tuple[Users, str],
+):
+    """
+    Test case to verify the successful retrieval of user information.
+
+    Args:
+        client (TestClient): The FastAPI test client.
+        user (tuple[Users, str]): A tuple containing the user object and access token.
+
+    Returns:
+        None
+    """
+
     user, access_token = user_with_token  # Unpack the user and access token
 
     # Act: Make a GET request to /me with valid token
@@ -133,7 +190,16 @@ def test_integrate_get_me_successful(client, db_session_integration, user_with_t
     assert body["email"] == user.email
 
 
-def test_integrate_get_me_unauthorized(client):
+def test_integrate_get_me_unauthorized(client: TestClient):
+    """
+    Test case to verify that an unauthorized user cannot access the /me endpoint.
+
+    Args:
+        client (TestClient): The FastAPI test client.
+
+    Returns:
+        None
+    """
     # Act: Make a GET request to /me without token
     response = client.get("/users/me")
 
@@ -143,8 +209,21 @@ def test_integrate_get_me_unauthorized(client):
 
 
 def test_integrate_read_users_successful(
-    client, db_session_integration, admin_user_with_token
+    client: TestClient,
+    db_session_integration: Session,
+    admin_user_with_token: tuple[Users, str],
 ):
+    """
+    Test case to verify successful retrieval of users.
+
+    Args:
+        client (TestClient): The FastAPI test client.
+        db_session_integration (Session): The integration test database session.
+        user (tuple[Users, str]): A tuple containing the user object and access token.
+
+    Returns:
+        None
+    """
     user, access_token = admin_user_with_token  # Unpack the user and access token
     admin_user_email = user.email
 
@@ -170,8 +249,20 @@ def test_integrate_read_users_successful(
     assert all(user["email"] in [u.email for u in users] for user in body)
 
 
-def test_integrate_read_users_unauthorized(client, user_with_token):
-    user, access_token = user_with_token  # Unpack the user and access token
+def test_integrate_read_users_unauthorized(
+    client: TestClient, user_with_token: tuple[Users, str]
+):
+    """
+    Test case to verify that a regular user is unauthorized to read users.
+
+    Args:
+        client (TestClient): The FastAPI test client.
+        user (tuple[Users, str]): A tuple containing the user and access token.
+
+    Returns:
+        None
+    """
+    _, access_token = user_with_token  # Unpack the user and access token
 
     # Act: Make a GET request to /users/ with regular user token
     response = client.get(

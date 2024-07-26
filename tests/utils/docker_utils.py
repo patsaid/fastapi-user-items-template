@@ -1,3 +1,7 @@
+"""
+This module contains utility functions for working with Docker containers.
+"""
+
 import os
 import time
 
@@ -6,6 +10,15 @@ from docker.models.containers import Container
 
 
 def is_container_ready(container: Container) -> bool:
+    """
+    Checks if a Docker container is ready by reloading its status and comparing it to "running".
+
+    Args:
+        container (Container): The Docker container to check.
+
+    Returns:
+        bool: True if the container is running, False otherwise.
+    """
     container.reload()
     return container.status == "running"
 
@@ -13,6 +26,20 @@ def is_container_ready(container: Container) -> bool:
 def wait_for_stable_status(
     container: Container, stable_duration: int = 3, interval: int = 1
 ) -> bool:
+    """
+    Waits for the container to reach a stable status for a specified duration.
+
+    Args:
+        container (Container): The container to monitor.
+        stable_duration (int, optional): The duration in seconds to wait for the
+            container to reach a stable status. Defaults to 3.
+        interval (int, optional): The interval in seconds between each check.
+            Defaults to 1.
+
+    Returns:
+        bool: True if the container reaches a stable status within the specified
+            duration, False otherwise.
+    """
     start_time = time.time()
     stable_count = 0
     while time.time() - start_time < stable_duration:
@@ -29,6 +56,12 @@ def wait_for_stable_status(
 
 
 def start_database_container() -> Container:
+    """
+    Starts a Docker container for the PostgreSQL database.
+
+    Returns:
+        The Docker container object representing the started database container.
+    """
     client = docker.from_env()
     scripts_dir = os.path.abspath("./scripts")
     container_name = "test-db"

@@ -1,8 +1,12 @@
-from enum import Enum
+"""
+This module contains an enumeration representing the kind of token.
+"""
 
 from enum import Enum
 
 
 class TokenKind(Enum):
-    RefreshToken = "refresh_token"
-    AccessToken = "access_token"
+    """Enumeration representing the kind of token."""
+
+    REFESH_TOKEN = "refresh_token"
+    ACCESS_TOKEN = "access_token"
