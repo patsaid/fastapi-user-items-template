@@ -1,38 +1,55 @@
+"""
+This module contains the API handlers for the category endpoints
+"""
+
 import logging
 from typing import List
 
-from app.routes.category.models import Categories, Category_Item_association
-from fastapi import Depends, HTTPException, Query, status, APIRouter
-from app.routes.category.schemas import (
-    CategoryCreate,
-    CategoryRead,
-    CategoryUpdate,
-    CategoryDelete,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.routes.auth.tokens import get_current_user
+from app.routes.category.models import Categories, CategoryItemAssociation
+from app.routes.category.schemas import (
+    CategoryCreate,
+    CategoryDelete,
+    CategoryRead,
+    CategoryUpdate,
+)
 from app.routes.users.models import Users
-
 
 logger = logging.getLogger("app")
 categories_router = APIRouter(prefix="/categories", tags=["Categories"])
 
 
-@categories_router.post("/", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
+@categories_router.post(
+    "/", response_model=CategoryRead, status_code=status.HTTP_201_CREATED
+)
 async def create_categories(
     payload: CategoryCreate,
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to create a category
-    """
+    Create a new category.
 
+    Args:
+        payload (CategoryCreate): The payload containing the category information.
+        current_user (Users, optional): The current user. Defaults to Depends(get_current_user).
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        Categories: The newly created category.
+
+    Raises:
+        HTTPException: If the current user is inactive or has insufficient permissions.
+        HTTPException: If there is an internal server error during category creation.
+    """
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to create a category"
+            "Inactive user %s attempted to create a category", current_user.id
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -41,7 +58,8 @@ async def create_categories(
     # Check if the current user has the 'admin' role
     if current_user.role != "admin":
         logger.warning(
-            f"User {current_user.id} attempted to create a category without proper permissions"
+            "User %s attempted to create a category without proper permissions",
+            current_user.id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
@@ -60,14 +78,15 @@ async def create_categories(
         db.commit()
         # Refresh to get the latest state of the category (e.g., auto-generated fields)
         db.refresh(new_category)
-        logger.info(f"Category {new_category.id} created by user {current_user.id}")
+        logger.info("Category %s created by user %s", new_category.id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error creating category: {e}")
+        logger.error("Error creating category: %s", e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the newly created category
     return new_category
@@ -81,13 +100,30 @@ async def update_categories(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to update a category
+    Update a category with the given category_id.
+
+    Parameters:
+    - category_id (int): The ID of the category to update.
+    - payload (CategoryUpdate): The updated category data.
+    - current_user (Users): The current authenticated user.
+    - db (Session): The database session.
+
+    Returns:
+    - CategoryRead: The updated category.
+
+    Raises:
+    - HTTPException: If the user is inactive or has insufficient permissions.
+    - HTTPException: If the category with the given category_id is not found.
+    - HTTPException: If there is an internal server error during the update.
+
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to update category {category_id}"
+            "Inactive user %s attempted to update category %s",
+            current_user.id,
+            category_id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -96,7 +132,9 @@ async def update_categories(
     # Check if the current user has the 'admin' role
     if current_user.role != "admin":
         logger.warning(
-            f"User {current_user.id} attempted to update a category {category_id} without proper permissions"
+            "User %s attempted to update a category %s without proper permissions",
+            current_user.id,
+            category_id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
@@ -105,7 +143,7 @@ async def update_categories(
     # Get the category instance
     category = db.query(Categories).filter(Categories.id == category_id).first()
     if not category:
-        logger.warning(f"Category {category_id} not found")
+        logger.warning("Category %s not found", category_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
@@ -119,14 +157,15 @@ async def update_categories(
         # Refresh to get the latest state of the category (e.g., auto-generated fields)
         db.refresh(category)
 
-        logger.info(f"Category {category.id} updated by user {current_user.id}")
+        logger.info("Category %s updated by user %s", category.id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error updating category {category_id}: {e}")
+        logger.error("Error updating category %s: %s", category_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the updated category
     return CategoryRead(
@@ -136,19 +175,32 @@ async def update_categories(
 
 
 @categories_router.get("/{category_id}", response_model=CategoryRead)
-async def read_categories(
+async def read_category_by_id(
     category_id: int,
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to read categories
+    Retrieve a category by its ID.
+
+    Parameters:
+    - category_id (int): The ID of the category to retrieve.
+    - current_user (Users): The current user making the request.
+    - db (Session): The database session.
+
+    Returns:
+    - CategoryRead: The category information.
+
+    Raises:
+    - HTTPException: If the current user is inactive or if the category is not found.
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to read category {category_id}"
+            "Inactive user %s attempted to read category %s",
+            current_user.id,
+            category_id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -157,12 +209,12 @@ async def read_categories(
     # Get the category instance
     category = db.query(Categories).filter(Categories.id == category_id).first()
     if not category:
-        logger.warning(f"Category {category_id} not found")
+        logger.warning("Category %s not found", category_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
 
-    logger.info(f"Category {category.id} read by user {current_user.id}")
+    logger.info("Category %s read by user %s", category.id, current_user.id)
 
     # Return the category
     return CategoryRead(
@@ -179,12 +231,25 @@ async def read_categories(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to read all categories with optional pagination
+    Retrieve a list of categories with pagination.
+
+    Parameters:
+    - skip (int): The number of categories to skip (default: 0).
+    - limit (int): The maximum number of categories to retrieve (default: 10).
+    - current_user (Users): The current authenticated user.
+    - db (Session): The database session.
+
+    Returns:
+    - List[CategoryRead]: A list of CategoryRead objects representing the retrieved categories.
+
+    Raises:
+    - HTTPException: If the current user is inactive or no categories are found.
+
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
-        logger.warning(f"Inactive user {current_user.id} attempted to read categories")
+        logger.warning("Inactive user %s attempted to read categories", current_user.id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
@@ -197,7 +262,7 @@ async def read_categories(
             status_code=status.HTTP_404_NOT_FOUND, detail="No categories found"
         )
 
-    logger.info(f"{len(categories)} categories read by user {current_user.id}")
+    logger.info("%s categories read by user %s", len(categories), current_user.id)
 
     # Return the categories
     return [CategoryRead(id=category.id, name=category.name) for category in categories]
@@ -210,13 +275,28 @@ async def delete_categories(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to delete a category
+    Delete a category with the given category_id.
+
+    Parameters:
+    - category_id (int): The ID of the category to delete.
+    - current_user (Users): The current authenticated user.
+    - db (Session): The database session.
+
+    Returns:
+    - CategoryDelete: The deleted category.
+
+    Raises:
+    - HTTPException: If the user is inactive or has insufficient permissions.
+    - HTTPException: If the category with the given category_id is not found.
+    - HTTPException: If there is an internal server error during the deletion.
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to delete category {category_id}"
+            "Inactive user %s attempted to delete category %s",
+            current_user.id,
+            category_id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -225,7 +305,9 @@ async def delete_categories(
     # Check if the current user has the 'admin' role
     if current_user.role != "admin":
         logger.warning(
-            f"User {current_user.id} attempted to delete category {category_id} without proper permissions"
+            "User %s attempted to delete category %s without proper permissions",
+            current_user.id,
+            category_id,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
@@ -234,14 +316,14 @@ async def delete_categories(
     # Get the category instance
     category = db.query(Categories).filter(Categories.id == category_id).first()
     if not category:
-        logger.warning(f"Category {category_id} not found")
+        logger.warning("Category %s not found", category_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Category not found"
         )
 
     # Delete the associations in the association table
-    db.query(Category_Item_association).filter(
-        Category_Item_association.category_id == category_id
+    db.query(CategoryItemAssociation).filter(
+        CategoryItemAssociation.category_id == category_id
     ).delete(synchronize_session=False)
 
     # Delete the category
@@ -250,14 +332,15 @@ async def delete_categories(
     try:
         # Commit the transaction
         db.commit()
-        logger.info(f"Category {category.id} deleted by user {current_user.id}")
+        logger.info("Category %s deleted by user %s", category.id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error deleting category {category_id}: {e}")
+        logger.error("Error deleting category %s: %s", category_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the deleted category
     return CategoryDelete(

@@ -1,13 +1,18 @@
+"""
+This module contains the API handlers for the items endpoints
+"""
+
 import logging
 from typing import List
 
-from app.routes.category.models import Categories
-from app.routes.items.models import Items
-from fastapi import Depends, HTTPException, Query, status, APIRouter
-from app.routes.items.schemas import ItemCreate, ItemRead, ItemUpdate, ItemDelete
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+
 from app.db.database import get_db
 from app.routes.auth.tokens import get_current_user
+from app.routes.category.models import Categories
+from app.routes.items.models import Items
+from app.routes.items.schemas import ItemCreate, ItemDelete, ItemRead, ItemUpdate
 from app.routes.users.models import Users
 
 logger = logging.getLogger("app")
@@ -21,12 +26,24 @@ async def create_items(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to create items
+    Create a new item.
+
+    Args:
+        payload (ItemCreate): The payload containing the item details.
+        current_user (Users, optional): The current user. Defaults to Depends(get_current_user).
+        db (Session, optional): The database session. Defaults to Depends(get_db).
+
+    Returns:
+        Items: The newly created item.
+
+    Raises:
+        HTTPException: If the current user is inactive, one or more categories are not found,
+            or an internal server error occurs.
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
-        logger.warning(f"Inactive user {current_user.id} attempted to create an item")
+        logger.warning("Inactive user %s attempted to create an item", current_user.id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
@@ -57,14 +74,15 @@ async def create_items(
         db.commit()
         # Refresh to get the latest state of the item (e.g., auto-generated fields)
         db.refresh(new_item)
-        logger.info(f"Item {new_item.id} created by user {current_user.id}")
+        logger.info("Item %s created by user %s", new_item.id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error creating item for user {current_user.id}: {e}")
+        logger.error("Error creating item for user %s: %s", current_user.id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the newly created item
     return new_item
@@ -78,13 +96,29 @@ async def update_items(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to update items
+    Update an item with the given item_id and payload.
+
+    Parameters:
+    - item_id (int): The ID of the item to be updated.
+    - payload (ItemUpdate): The updated item data.
+    - current_user (Users, optional): The current user. Defaults to the result of
+        the get_current_user function.
+    - db (Session, optional): The database session. Defaults to the result of the get_db function.
+
+    Returns:
+    - item (Items): The updated item.
+
+    Raises:
+    - HTTPException: If the current user is inactive, the item is not found, or there is
+        an internal server error.
+    - HTTPException: If one or more categories specified in the payload are not found.
+
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to update item {item_id}"
+            "Inactive user %s attempted to update item %s", current_user.id, item_id
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -109,7 +143,7 @@ async def update_items(
         .first()
     )
     if not item:
-        logger.warning(f"Item {item_id} not found")
+        logger.warning("Item %s not found", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
         )
@@ -124,29 +158,41 @@ async def update_items(
         # Refresh to get the latest state of the item (e.g., auto-generated fields)
         db.refresh(item)
 
-        logger.info(f"Item {item.id} updated by user {current_user.id}")
+        logger.info("Item %s updated by user %s", item.id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error updating item {item_id}: {e}")
+        logger.error("Error updating item %s: %s", item_id, e)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the updated item
     return item
 
 
 @items_router.get("/{item_id}", response_model=ItemRead)
-async def read_items(
+async def read_item_by_id(
     item_id: int,
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to read items
-    """
+    Retrieve an item by its ID.
 
+    Parameters:
+    - item_id (int): The ID of the item to retrieve.
+    - current_user (Users): The current user making the request.
+    - db (Session): The database session.
+
+    Returns:
+    - item (Items): The retrieved item.
+
+    Raises:
+    - HTTPException: If the item is not found.
+
+    """
     # Get the item instance
     item = (
         db.query(Items)
@@ -155,13 +201,13 @@ async def read_items(
         .first()
     )
     if not item:
-        logger.warning(f"Item {item_id} not found")
+        logger.warning("Item %s not found", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
         )
 
     # Log the successful retrieval of the item
-    logger.info(f"Item {item_id} retrieved by user {current_user.id}")
+    logger.info("Item %s retrieved by user %s", item_id, current_user.id)
 
     # Return the item
     return item
@@ -175,12 +221,30 @@ async def read_all_items(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to read all items with optional pagination
+    Retrieve a list of items.
+
+    This function retrieves a list of items from the database based on the
+    provided parameters.
+    It applies pagination to limit the number of items returned.
+
+    Parameters:
+    - skip (int): The number of items to skip. Default is 0.
+    - limit (int): The maximum number of items to return. Default is 10.
+    - current_user (Users): The current user. This parameter is injected by the
+        `get_current_user` dependency.
+    - db (Session): The database session. This parameter is injected by the `get_db` dependency.
+
+    Returns:
+    - List[ItemRead]: A list of items read from the database.
+
+    Raises:
+    - HTTPException: If the current user is inactive or no items are found.
+
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
-        logger.warning(f"Inactive user {current_user.id} attempted to read items")
+        logger.warning("Inactive user %s attempted to read items", current_user.id)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
         )
@@ -201,7 +265,7 @@ async def read_all_items(
             status_code=status.HTTP_404_NOT_FOUND, detail="No items found"
         )
 
-    logger.info(f"{len(items)} items read by user {current_user.id}")
+    logger.info("%d items read by user %s", len(items), current_user.id)
 
     # Return the items
     return [
@@ -216,13 +280,25 @@ async def delete_items(
     db: Session = Depends(get_db),
 ):
     """
-    This API is used to delete items
+    Delete an item.
+
+    Parameters:
+    - item_id (int): The ID of the item to be deleted.
+    - current_user (Users): The current user making the request.
+    - db (Session): The database session.
+
+    Returns:
+    - ItemDelete: The deleted item ID.
+
+    Raises:
+    - HTTPException: If the current user is inactive, the item is not found, or
+        there is an internal server error.
     """
 
     # Ensure the current user is active
     if not current_user.is_active:
         logger.warning(
-            f"Inactive user {current_user.id} attempted to delete item {item_id}"
+            "Inactive user %s attempted to delete item %s", current_user.id, item_id
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user"
@@ -236,7 +312,7 @@ async def delete_items(
         .first()
     )
     if not item:
-        logger.warning(f"Item {item_id} not found")
+        logger.warning("Item %s not found", item_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Item not found"
         )
@@ -247,14 +323,15 @@ async def delete_items(
     try:
         # Commit the transaction
         db.commit()
-        logger.info(f"Item {item_id} deleted by user {current_user.id}")
+        logger.info("Item %s deleted by user %s", item_id, current_user.id)
     except Exception as e:
         # Rollback in case of error
         db.rollback()
-        logger.error(f"Error deleting item {item_id}: {str(e)}")
+        logger.error("Error deleting item %s: %s", item_id, str(e))
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error"
-        )
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        ) from e
 
     # Return the deleted item ID
     return ItemDelete(id=item.id)

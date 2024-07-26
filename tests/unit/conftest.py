@@ -1,20 +1,24 @@
 import pytest
+
+from app.main import app
 from app.routes.auth.tokens import get_current_user
 from app.routes.users.models import Users
 from tests.factories.models_factory import get_random_user_dict
-from app.main import app
+
 
 @pytest.fixture(scope="function")
 def mock_admin_user(monkeypatch):
     user_dict = get_random_user_dict()
     user_dict["role"] = "admin"
     user_dict["is_active"] = True
-    
+
     def mock_get_current_user():
         return Users(**user_dict)
+
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
     return user_dict
+
 
 @pytest.fixture(scope="function")
 def mock_current_user(monkeypatch):
@@ -24,9 +28,10 @@ def mock_current_user(monkeypatch):
 
     def mock_get_current_user():
         return Users(**user_dict)
-    
+
     app.dependency_overrides[get_current_user] = mock_get_current_user
     return user_dict
+
 
 @pytest.fixture(scope="function")
 def mock_db_operations(monkeypatch):

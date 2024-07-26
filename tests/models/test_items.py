@@ -1,25 +1,37 @@
-from sqlalchemy import Integer, String, CheckConstraint
+"""
+This module contains tests to validate the structure of the 'items' table in the database schema.
+"""
+
+from typing import Any
+
+from sqlalchemy import Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 
-"""
-## Table and Column Validation
-"""
 
-"""
-- [ ] Confirm the presence of all required tables within the database schema.
-"""
+def test_model_structure_table_exists(db_inspector: Any):
+    """
+    Test to confirm the presence of the 'items' table within the database schema.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_table_exists(db_inspector):
+    Returns:
+        None
+    """
     assert db_inspector.has_table("items")
 
 
-"""
-- [ ] Validate the existence of expected columns in each table, ensuring correct data types.
-"""
+def test_model_structure_data_types(db_inspector: Any):
+    """
+    Test to validate the existence of expected columns in the 'items' table and
+    ensure correct data types.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_data_types(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
@@ -28,12 +40,16 @@ def test_model_structure_data_types(db_inspector):
     assert isinstance(columns["name"]["type"], String)
 
 
-"""
-- [ ] Verify nullable or not nullable fields
-"""
+def test_model_structure_nullable_constraints(db_inspector: Any):
+    """
+    Test to verify nullable or not nullable fields in the 'items' table.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_nullable_constraints(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     columns = db_inspector.get_columns(table)
     expected_nullable = {
@@ -48,12 +64,16 @@ def test_model_structure_nullable_constraints(db_inspector):
         ), f"Column {column['name']} is not nullable as expected."
 
 
-"""
-- [ ] Test columns with specific constraints to ensure they are accurately defined.
-"""
+def test_model_structure_column_constraints(db_inspector: Any):
+    """
+    Test to verify columns with specific constraints in the 'items' table.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_column_constraints(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     constraints = db_inspector.get_check_constraints(table)
 
@@ -62,12 +82,16 @@ def test_model_structure_column_constraints(db_inspector):
     )
 
 
-"""
-- [ ] Verify the correctness of default values for relevant columns.
-"""
+def test_model_structure_default_values(db_inspector: Any):
+    """
+    Test to verify the correctness of default values for relevant columns in the 'items' table.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_default_values(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
@@ -76,24 +100,33 @@ def test_model_structure_default_values(db_inspector):
     assert columns["user_id"]["default"] is None
 
 
-"""
-- [ ] Ensure that column lengths align with defined requirements.
-"""
+def test_model_structure_column_lengths(db_inspector: Any):
+    """
+    Test to ensure that column lengths in the 'items' table align with defined requirements.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_column_lengths(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
     assert columns["name"]["type"].length == 255
 
 
-"""
-- [ ] Validate the enforcement of unique constraints for columns requiring unique values.
-"""
+def test_model_structure_unique_constraints(db_inspector: Any):
+    """
+    Test to validate the enforcement of unique constraints for columns requiring unique
+    values in the 'items' table.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_unique_constraints(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     constraints = db_inspector.get_unique_constraints(table)
 
@@ -104,12 +137,16 @@ def test_model_structure_unique_constraints(db_inspector):
     )
 
 
-"""
-- [ ] Validate relationships between tables.
-"""
+def test_model_structure_relationships(db_inspector: Any):
+    """
+    Test to validate relationships between tables in the database schema.
 
+    Args:
+        db_inspector (Any): The database inspector object.
 
-def test_model_structure_relationships(db_inspector):
+    Returns:
+        None
+    """
     table = "items"
     foreign_keys = db_inspector.get_foreign_keys(table)
 
@@ -124,10 +161,11 @@ def test_model_structure_relationships(db_inspector):
     # Check for the foreign key relationship between category_item_association.item_id and items.id
     table = "category_item_association"
     foreign_keys = db_inspector.get_foreign_keys(table)
-    
+
     assert any(
-        fk["referred_table"] == "items" and 
-        fk["referred_columns"] == ["id"] and 
-        fk["constrained_columns"] == ["item_id"]
+        fk["referred_table"] == "items"
+        and fk["referred_columns"] == ["id"]
+        and fk["constrained_columns"] == ["item_id"]
         for fk in foreign_keys
-    ), "Foreign key constraint from category_item_association.item_id to items.id is missing or incorrect."
+    ), """Foreign key constraint from category_item_association.item_id
+    to items.id is missing or incorrect."""

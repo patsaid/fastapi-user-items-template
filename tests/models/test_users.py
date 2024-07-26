@@ -1,23 +1,31 @@
+"""
+This module contains tests for the User model.
+
+The tests in this module validate the structure and constraints of the User model in the
+database. It includes tests to confirm the presence of required tables, validate the
+existence and data types of expected columns, verify nullable or not nullable fields,
+test columns with specific constraints, ensure the correctness of default values,
+validate column lengths, and enforce unique constraints for columns requiring unique values.
+"""
+
+from typing import Any
+
 from sqlalchemy import Boolean, String
 from sqlalchemy.dialects.postgresql import UUID
 
-"""
-## Table and Column Validation
-"""
 
-"""
-- [ ] Confirm the presence of all required tables within the database schema.
-"""
-
-def test_model_structure_table_exists(db_inspector):
+def test_model_structure_table_exists(db_inspector: Any):
+    """
+    Test to confirm the presence of the "users" table within the database schema.
+    """
     assert db_inspector.has_table("users")
 
 
-"""
-- [ ] Validate the existence of expected columns in each table, ensuring correct data types.
-"""
-
-def test_model_structure_data_types(db_inspector):
+def test_model_structure_data_types(db_inspector: Any):
+    """
+    Test to validate the existence of expected columns in the "users" table,
+    ensuring correct data types.
+    """
     table = "users"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
@@ -29,11 +37,10 @@ def test_model_structure_data_types(db_inspector):
     assert isinstance(columns["role"]["type"], String)  # Assuming role is a String
 
 
-"""
-- [ ] Verify nullable or not nullable fields
-"""
-
-def test_model_structure_nullable_constraints(db_inspector):
+def test_model_structure_nullable_constraints(db_inspector: Any):
+    """
+    Test to verify nullable or not nullable fields in the "users" table.
+    """
     table = "users"
     columns = db_inspector.get_columns(table)
     expected_nullable = {
@@ -51,11 +58,11 @@ def test_model_structure_nullable_constraints(db_inspector):
         ), f"Column {column['name']} is not nullable as expected."
 
 
-"""
-- [ ] Test columns with specific constraints to ensure they are accurately defined.
-"""
-
-def test_model_structure_column_constraints(db_inspector):
+def test_model_structure_column_constraints(db_inspector: Any):
+    """
+    Test to ensure that columns with specific constraints are accurately defined in
+    the "users" table.
+    """
     table = "users"
     constraints = db_inspector.get_check_constraints(table)
 
@@ -74,11 +81,10 @@ def test_model_structure_column_constraints(db_inspector):
     )  # Add check for role
 
 
-"""
-- [ ] Verify the correctness of default values for relevant columns.
-"""
-
-def test_model_structure_default_values(db_inspector):
+def test_model_structure_default_values(db_inspector: Any):
+    """
+    Test to verify the correctness of default values for relevant columns in the "users" table.
+    """
     table = "users"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
@@ -86,11 +92,10 @@ def test_model_structure_default_values(db_inspector):
     assert columns["is_active"]["default"].lower() == "false"
 
 
-"""
-- [ ] Ensure that column lengths align with defined requirements.
-"""
-
-def test_model_structure_column_lengths(db_inspector):
+def test_model_structure_column_lengths(db_inspector: Any):
+    """
+    Test to ensure that column lengths in the "users" table align with defined requirements.
+    """
     table = "users"
     columns = {column["name"]: column for column in db_inspector.get_columns(table)}
 
@@ -100,14 +105,13 @@ def test_model_structure_column_lengths(db_inspector):
     assert columns["role"]["type"].length == 50  # Adjust length according to your model
 
 
-"""
-- [ ] Validate the enforcement of unique constraints for columns requiring unique values.
-"""
-
-def test_model_structure_unique_constraints(db_inspector):
+def test_model_structure_unique_constraints(db_inspector: Any):
+    """
+    Test to validate the enforcement of unique constraints for columns requiring unique values
+    in the "users" table.
+    """
     table = "users"
     constraints = db_inspector.get_unique_constraints(table)
 
     assert any(constraint["name"] == "users_unique_email" for constraint in constraints)
     # Add any additional unique constraints if applicable
-
