@@ -11,6 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: test  # Use the GitHub environment named `test`
 
     env:
       POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
