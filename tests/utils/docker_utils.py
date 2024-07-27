@@ -86,7 +86,7 @@ def start_database_container() -> Container:
             "POSTGRES_PASSWORD": "postgres",
         },
         "volumes": [f"{scripts_dir}:/docker-entrypoint-initdb.d"],
-        "network_mode": "user-items_dev-network",
+        "network_mode": "fastapi-user-items-template_dev-network",
     }
 
     container = client.containers.run(**container_config)
