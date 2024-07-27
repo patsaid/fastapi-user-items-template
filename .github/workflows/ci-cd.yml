@@ -46,19 +46,8 @@ jobs:
         echo "TEST_DATABASE_URL=${{ secrets.TEST_DATABASE_URL }}" >> .env
         echo "PROD_DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}" >> .env
 
-    - name: Install Docker
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y docker.io
-  
-    - name: Check Docker version
-      run: docker --version
-
     - name: Create Docker network
       run: docker network create user-items_dev-network
-
-    - name: Pull PostgreSQL image
-      run: docker pull postgres:16.1-alpine3.19
 
     - name: Set up Docker Compose
       run: |
