@@ -3,7 +3,9 @@ This module contains fixtures for integration tests.
 """
 
 import os
+from time import sleep
 
+import docker
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
